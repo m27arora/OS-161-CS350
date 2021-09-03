@@ -38,6 +38,7 @@
 
 
 #include <machine/vm.h>
+#include "opt-A3.h"
 
 /* Fault-type arguments to vm_fault() */
 #define VM_FAULT_READ        0    /* A read was attempted */
@@ -59,5 +60,9 @@ void free_kpages(vaddr_t addr);
 void vm_tlbshootdown_all(void);
 void vm_tlbshootdown(const struct tlbshootdown *);
 
+#if OPT_A3
+paddr_t core_map_mem(unsigned long npages);
+void printCoremap(void);
+#endif
 
 #endif /* _VM_H_ */

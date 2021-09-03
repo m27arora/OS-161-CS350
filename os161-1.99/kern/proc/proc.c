@@ -49,7 +49,8 @@
 #include <vnode.h>
 #include <vfs.h>
 #include <synch.h>
-#include <kern/fcntl.h>  
+#include <kern/fcntl.h> 
+#include "opt-A2.h"
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -68,7 +69,6 @@ static struct semaphore *proc_count_mutex;
 /* used to signal the kernel menu thread when there are no processes */
 struct semaphore *no_proc_sem;   
 #endif  // UW
-
 
 
 /*
@@ -102,6 +102,23 @@ proc_create(const char *name)
 #ifdef UW
 	proc->console = NULL;
 #endif // UW
+
+#if OPT_A2
+/*if(proc_count>0) {
+  lock_acquire(lk_newPid); //make a  lock for pid
+    proc->proc_pid = newPid; //make global var
+    newPid++;
+  lock_release(lk_newPid);
+}*/
+
+  proc->parentProc = NULL;
+  proc->children = array_create();
+  proc->proc_lock = lock_create("proc_lock");
+  proc->proc_cv = cv_create("proc_cv");
+  proc->isAlive = true;
+#endif
+ 
+
 
 	return proc;
 }
@@ -163,6 +180,13 @@ proc_destroy(struct proc *proc)
 	}
 #endif // UW
 
+  #if OPT_A2
+//kfree(proc->parentProc);
+cv_destroy(proc->proc_cv);
+lock_destroy(proc->proc_lock);
+//kfree(proc->children);
+#endif
+
 	threadarray_cleanup(&proc->p_threads);
 	spinlock_cleanup(&proc->p_lock);
 
@@ -183,6 +207,7 @@ proc_destroy(struct proc *proc)
 	}
 	V(proc_count_mutex);
 #endif // UW
+
 	
 
 }
@@ -193,6 +218,14 @@ proc_destroy(struct proc *proc)
 void
 proc_bootstrap(void)
 {
+
+/*#if OPT_A2*/
+  
+  lk_newPid = lock_create("lk_newPid");
+  newPid = 1;
+
+/*#endif;*/
+
   kproc = proc_create("[kernel]");
   if (kproc == NULL) {
     panic("proc_create for kproc failed\n");
@@ -208,6 +241,7 @@ proc_bootstrap(void)
     panic("could not create no_proc_sem semaphore\n");
   }
 #endif // UW 
+
 }
 
 /*
@@ -270,6 +304,17 @@ proc_create_runprogram(const char *name)
 	proc_count++;
 	V(proc_count_mutex);
 #endif // UW
+
+#if OPT_A2
+
+  if(proc_count>0) {
+  lock_acquire(lk_newPid); //make a  lock for pid
+    proc->proc_pid = newPid; //make global var
+    newPid++;
+  lock_release(lk_newPid);
+}
+#endif
+
 
 	return proc;
 }

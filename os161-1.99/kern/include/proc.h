@@ -38,6 +38,8 @@
 
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
+#include "opt-A2.h"
+#include <array.h>
 
 struct addrspace;
 struct vnode;
@@ -45,10 +47,16 @@ struct vnode;
 struct semaphore;
 #endif // UW
 
+#if OPT_A2
+volatile pid_t newPid;
+struct lock *lk_newPid;
+#endif
+
 /*
  * Process structure.
  */
 struct proc {
+
 	char *p_name;			/* Name of this process */
 	struct spinlock p_lock;		/* Lock for this structure */
 	struct threadarray p_threads;	/* Threads in this process */
@@ -67,7 +75,17 @@ struct proc {
      it has opened, not just the console. */
   struct vnode *console;                /* a vnode for the console device */
 #endif
+#if OPT_A2
 
+struct proc *parentProc;
+pid_t proc_pid;
+struct array *children;
+struct cv *proc_cv;
+struct lock *proc_lock;
+int exit_code;
+bool isAlive;
+
+#endif 
 	/* add more material here as needed */
 };
 
